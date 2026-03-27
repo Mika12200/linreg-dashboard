@@ -10,6 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #0d1117; --panel: #161b27; --border: #21283a;
@@ -177,31 +178,35 @@
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#ef5350;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-reg" onchange="toggleReg()" checked style="accent-color:#ef5350;width:14px;height:14px;">
+          <input type="checkbox" id="cb-reg" onchange="toggleReg()" checked style="accent-color:#ef5350;width:17px;height:17px;cursor:pointer;">
           Régression
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#00e676;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-mm20" onchange="toggleMA('mm20')" style="accent-color:#00e676;width:14px;height:14px;">
+          <input type="checkbox" id="cb-mm20" onchange="toggleMA('mm20')" style="accent-color:#00e676;width:17px;height:17px;cursor:pointer;">
           MM 20j
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#ab47bc;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-mm50" onchange="toggleMA('mm50')" style="accent-color:#ab47bc;width:14px;height:14px;">
+          <input type="checkbox" id="cb-mm50" onchange="toggleMA('mm50')" style="accent-color:#ab47bc;width:17px;height:17px;cursor:pointer;">
           MM 50j
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#26c6da;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-mm100" onchange="toggleMA('mm100')" style="accent-color:#26c6da;width:14px;height:14px;">
+          <input type="checkbox" id="cb-mm100" onchange="toggleMA('mm100')" style="accent-color:#26c6da;width:17px;height:17px;cursor:pointer;">
           MM 100j
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#f5a623;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-mm200" onchange="toggleMA('mm200')" style="accent-color:#f5a623;width:14px;height:14px;">
+          <input type="checkbox" id="cb-mm200" onchange="toggleMA('mm200')" style="accent-color:#f5a623;width:17px;height:17px;cursor:pointer;">
           MM 200j
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#ffd700;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-cross" onchange="toggleCross()" checked style="accent-color:#ffd700;width:14px;height:14px;">
+          <input type="checkbox" id="cb-cross" onchange="toggleCross()" checked style="accent-color:#ffd700;width:17px;height:17px;cursor:pointer;">
           Achat/Vente
         </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#26c6da;font-weight:600;user-select:none;">
+          <input type="checkbox" id="cb-linreg2" onchange="toggleLinReg2()" style="accent-color:#26c6da;width:17px;height:17px;cursor:pointer;">
+          LinReg ±2σ
+        </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#78909c;font-weight:600;user-select:none;">
-          <input type="checkbox" id="cb-volume" onchange="toggleVolume()" style="accent-color:#78909c;width:14px;height:14px;">
+          <input type="checkbox" id="cb-volume" onchange="toggleVolume()" style="accent-color:#78909c;width:17px;height:17px;cursor:pointer;">
           Volume
         </label>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -221,6 +226,9 @@
           <span id="corr-badge" style="display:none;font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:20px;cursor:pointer" onclick="removeComparison()" title="Cliquer pour supprimer">—</span>
         </div>
         <div class="period-btns">
+          <button class="pbtn interval-btn active" id="btn-iv-mo" onclick="setChartInterval('1mo',this)" title="Bougie mensuelle">1M</button>
+          <button class="pbtn interval-btn" id="btn-iv-wk" onclick="setChartInterval('1wk',this)" title="Bougie hebdomadaire">1S</button>
+          <span style="color:var(--border);margin:0 2px">|</span>
           <button class="pbtn" onclick="setPeriod('3mo',this)">3M</button>
           <button class="pbtn" onclick="setPeriod('6mo',this)">6M</button>
           <button class="pbtn" onclick="setPeriod('1y',this)">1A</button>
@@ -243,10 +251,7 @@
       <div id="chart-container">
         <div class="chart-empty"><span style="font-size:2rem">📈</span>Cliquez sur une valeur</div>
       </div>
-      <div id="news-panel" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
-        <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📰 Actualités</div>
-        <div id="news-list"></div>
-      </div>
+      <div id="news-panel" style="display:none"></div>
     </div>
   </div>
 
@@ -319,11 +324,13 @@ function gsymToYahoo(gsym) {
 const ALL_TABS = ['BOURSE','CAC40','SP500','NASDAQ'];
 
 const INDICES_DEF = [
-  { gsym: 'PX1',  name: 'CAC 40',            yahooSym: '^FCHI' },
-  { gsym: 'INX',  name: 'S&P 500',           yahooSym: '^GSPC' },
-  { gsym: 'IXIC', name: 'Nasdaq Composite',  yahooSym: '^IXIC' },
-  { gsym: 'DJI',  name: 'Dow Jones',         yahooSym: '^DJI'  },
-  { gsym: 'VIX',  name: 'VIX Volatilité',    yahooSym: '^VIX'  },
+  { gsym: 'PX1',      name: 'CAC 40',           yahooSym: '^FCHI',    unit: 'EUR' },
+  { gsym: 'INX',      name: 'S&P 500',          yahooSym: '^GSPC',    unit: 'USD' },
+  { gsym: 'IXIC',     name: 'Nasdaq Composite', yahooSym: '^IXIC',    unit: 'USD' },
+  { gsym: 'DJI',      name: 'Dow Jones',        yahooSym: '^DJI',     unit: 'USD' },
+  { gsym: 'VIX',      name: 'VIX Volatilité',   yahooSym: '^VIX',     unit: 'USD' },
+  { gsym: 'BZ=F',     name: 'Pétrole Brent',    yahooSym: 'BZ=F',     unit: 'USD', suffix: '/baril' },
+  { gsym: 'EURUSD=X', name: 'EUR / USD',         yahooSym: 'EURUSD=X', unit: 'FX'  },
 ];
 
 const CRYPTO_DEF = [
@@ -351,7 +358,9 @@ let allTabsData = {};  // { BOURSE:[...], CAC40:[...], ... }
 let stocks = [];       // stocks de l'onglet actif
 let selectedIdx = null;
 let currentPeriod = 'max';
+let currentInterval = '1mo'; // '1mo' ou '1wk'
 let allCandles = [];
+let allCandlesDaily = []; // données journalières pour les signaux MA
 let currentGsym = null;
 let currentChart = null;
 let portfolioMode = false;
@@ -483,6 +492,11 @@ function addMonths(dateStr, n) {
   d.setMonth(d.getMonth() + n);
   return d.toISOString().split('T')[0];
 }
+function addWeeks(dateStr, n) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n * 7);
+  return d.toISOString().split('T')[0];
+}
 
 // ══════════════════════════════════════════════
 // CHART
@@ -504,17 +518,25 @@ function selectStock(idx) {
 async function loadChart(ticker, livePrice = null, currency = 'EUR', maxRatio = 2.5) {
   currentMaxRatio = maxRatio;
   portfolioMode = false;
-  // Restaure la sidebar σ si elle était cachée (mode portefeuille)
   document.getElementById('chart-sidebar').style.display = '';
-  // Nettoie le graphique portefeuille si actif
   if (window._portfolioChart) { try { window._portfolioChart.remove(); } catch(_){} window._portfolioChart = null; }
   const container = document.getElementById('chart-container');
   container.innerHTML = '<div class="chart-empty"><div class="spinner"></div>Chargement…</div>';
   try {
-    const resp = await fetch(`${SERVER}/api/history?ticker=${ticker}`);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    allCandles = data.candles || [];
+    // Charger les données du graphique (interval choisi) + journalier (signaux MA) en parallèle
+    const [respM, respD] = await Promise.allSettled([
+      fetch(`${SERVER}/api/history?ticker=${ticker}&range=max&interval=${currentInterval}`),
+      fetch(`${SERVER}/api/history?ticker=${ticker}&range=max&interval=1d`),
+    ]);
+    if (respM.status !== 'fulfilled' || !respM.value.ok) throw new Error('HTTP error');
+    const dataM = await respM.value.json();
+    allCandles = (dataM.candles || []).filter(c => c.close);
+    // Données journalières pour signaux MA (optionnel, pas bloquant)
+    allCandlesDaily = [];
+    if (respD.status === 'fulfilled' && respD.value.ok) {
+      const dataD = await respD.value.json();
+      allCandlesDaily = (dataD.candles || []).filter(c => c.close).sort((a,b) => a.time.localeCompare(b.time));
+    }
     drawChart(allCandles, livePrice, currency, maxRatio);
   } catch(e) {
     container.innerHTML = `<div class="chart-empty" style="color:var(--red)">Graphique indisponible — lancez node server.js</div>`;
@@ -526,10 +548,26 @@ let currentCurrency = 'EUR';
 let currentMaxRatio = 2.5;
 function setPeriod(p, btn) {
   currentPeriod = p;
-  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+  // Ne retirer active que sur les boutons de période (pas les boutons 1M/1S)
+  document.querySelectorAll('.pbtn:not(.interval-btn)').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (portfolioMode) { drawPortfolioChart(p); return; }
   if (allCandles.length) drawChart(allCandles, currentLivePrice, currentCurrency, currentMaxRatio);
+}
+
+function setChartInterval(interval, btn) {
+  if (currentInterval === interval) return;
+  currentInterval = interval;
+  document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!currentGsym || portfolioMode) return;
+  // Recharger le graphique avec le nouvel interval
+  const indexDef  = INDICES_DEF.find(d => d.gsym === currentGsym);
+  const cryptoDef = CRYPTO_DEF.find(d => d.gsym === currentGsym);
+  const ticker = indexDef  ? indexDef.gsym.replace(/=/g,'')
+               : cryptoDef ? cryptoDef.gsym
+               : gsymToYahoo(currentGsym);
+  loadChart(ticker, currentLivePrice, currentCurrency, currentMaxRatio);
 }
 
 function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) {
@@ -539,8 +577,8 @@ function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) 
   const container = document.getElementById('chart-container');
   container.innerHTML = '';
 
-  // ── Régression : toujours sur les 360 derniers mois (ou tout si moins) ──
-  const regN       = Math.min(360, candles.length);
+  // ── Régression : 360 mois (mensuel) ou 1560 semaines (hebdo) ≈ 30 ans dans les deux cas ──
+  const regN       = Math.min(currentInterval === '1wk' ? 1560 : 360, candles.length);
   const regStart   = candles.length - regN;
   const regCloses  = candles.slice(regStart).map(c => c.close);
   const { slope, intercept, stdDev } = calcLinReg(regCloses, regN);
@@ -548,6 +586,9 @@ function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) 
   // Map time → index dans la fenêtre de régression
   const timeToRegIdx = {};
   for (let i = 0; i < regN; i++) timeToRegIdx[candles[regStart + i].time] = i;
+
+  // Expose les paramètres de régression globalement pour les signaux LinReg ±2σ
+  window._regParams = { slope, intercept, stdDev, timeToRegIdx };
 
   // ── Candles filtrées par période ──
   const days   = { '3mo': 90, '6mo': 180, '1y': 365, '3y': 1095 }[currentPeriod];
@@ -589,6 +630,10 @@ function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) 
     });
   }
   applyCrossSignals(candleSeries, data);
+  // Signaux LinReg ±2σ si case cochée
+  if (document.getElementById('cb-linreg2')?.checked) {
+    applyLinReg2Signals(candleSeries, data);
+  }
 
   // ── Séries régression (n'influencent pas l'échelle Y) ──
   const noScale = () => null;
@@ -616,10 +661,12 @@ function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) 
     m4Data.push({  time: candle.time, value: r(val - 4 * stdDev) });
   }
 
-  // ── Projection 6 mois ──
-  const lastTime = candles[candles.length - 1].time;
-  for (let j = 1; j <= 6; j++) {
-    const time = addMonths(lastTime, j);
+  // ── Projection 6 mois (26 semaines si hebdo) ──
+  const lastTime   = candles[candles.length - 1].time;
+  const projSteps  = currentInterval === '1wk' ? 26 : 6;
+  const addStep    = currentInterval === '1wk' ? addWeeks : addMonths;
+  for (let j = 1; j <= projSteps; j++) {
+    const time = addStep(lastTime, j);
     const val  = intercept + slope * (regN - 1 + j);
     regData.push({ time, value: r(val) });
     p2Data.push({  time, value: r(val + 2 * stdDev) });
@@ -675,6 +722,13 @@ function drawChart(candles, livePrice = null, currency = 'EUR', maxRatio = 2.5) 
     scoreEl.style.color = Math.abs(scoreVal) >= 3 ? '#ff9800' : Math.abs(scoreVal) >= 2 ? '#64a9f0' : '#7d8590';
     scoreEl.style.display = '';
   } else if (scoreEl) scoreEl.style.display = 'none';
+
+  // ── Indicateur bougies + intervalle dans le sous-titre ──
+  const subEl = document.getElementById('chart-sub');
+  if (subEl) {
+    const ivLabel = currentInterval === '1wk' ? '· hebdomadaire' : '· mensuel';
+    subEl.textContent = (currentGsym || '') + ` — ${candles.length} bougies ${ivLabel}`;
+  }
 
   chart.timeScale().fitContent();
   new ResizeObserver(() => chart.resize(container.clientWidth, 533)).observe(container);
@@ -829,8 +883,14 @@ function openBacktest() {
 }
 
 async function backtestStock(gsym) {
-  const ticker = gsymToYahoo(gsym);
-  const currency = gsym.startsWith('EPA:') ? '€' : '$';
+  // Résolution du ticker Yahoo : indices via INDICES_DEF, actions via gsymToYahoo
+  const indexDef = INDICES_DEF.find(d => d.gsym === gsym);
+  const cryptoDef = CRYPTO_DEF.find(d => d.gsym === gsym);
+  const ticker = indexDef ? indexDef.gsym.replace(/=/g,'')
+               : cryptoDef ? cryptoDef.gsym
+               : gsymToYahoo(gsym);
+  const currency = indexDef ? (indexDef.unit === 'EUR' ? '€' : indexDef.unit === 'FX' ? '' : '$')
+                 : gsym.startsWith('EPA:') ? '€' : '$';
   const symName = document.getElementById('chart-title')?.textContent || gsym;
 
   const modal = document.createElement('div');
@@ -840,10 +900,19 @@ async function backtestStock(gsym) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
   try {
-    const resp = await fetch(`${SERVER}/api/history?ticker=${ticker}`);
-    if (!resp.ok) throw new Error('Données indisponibles');
-    const data = await resp.json();
-    const candles = (data.candles || []).filter(c => c.close).sort((a,b) => a.time.localeCompare(b.time));
+    // Données hebdomadaires pour les MM (range=max supporté, ~4x moins lourd que journalier)
+    // Périodes adaptées : MA20j≈MA4sem, MA50j≈MA10sem, MA100j≈MA20sem, MA200j≈MA40sem
+    // Données mensuelles pour LinReg (regression sur 360 périodes mensuelles)
+    const [respWeekly, respMonthly] = await Promise.all([
+      fetch(`${SERVER}/api/history?ticker=${ticker}&range=max&interval=1wk`),
+      fetch(`${SERVER}/api/history?ticker=${ticker}`),
+    ]);
+    if (!respWeekly.ok && !respMonthly.ok) throw new Error('Données indisponibles');
+    const dataWeekly  = respWeekly.ok  ? await respWeekly.json()  : { candles: [] };
+    const dataMonthly = respMonthly.ok ? await respMonthly.json() : { candles: [] };
+    const candlesDaily   = (dataWeekly.candles  || []).filter(c => c.close).sort((a,b) => a.time.localeCompare(b.time));
+    const candlesMonthly = (dataMonthly.candles || []).filter(c => c.close).sort((a,b) => a.time.localeCompare(b.time));
+    const candles = candlesMonthly; // LinReg utilise les données mensuelles
     if (candles.length < 60) throw new Error('Pas assez de données historiques');
 
     const closes = candles.map(c => c.close);
@@ -867,45 +936,54 @@ async function backtestStock(gsym) {
       return { equity, peak, maxDD };
     }
 
-    // ── Stratégie LinReg ±3σ ──
-    function runLinReg(N) {
-      const trades = [], TOL = 0.04;
+    // ── Stratégie LinReg ±2σ sur données mensuelles (cohérent avec le graphique) ──
+    const closesMonthly = candlesMonthly.map(c => c.close);
+    function runLinReg(Nmonths, sigmaEntry = 2, sigmaExit = 2) {
+      const arr = closesMonthly, cands = candlesMonthly;
+      // Adapte la fenêtre si pas assez de données (min 60 mois)
+      const N = Math.min(Nmonths, Math.floor(arr.length * 0.85));
+      if (arr.length < 60 || N < 60) return finalizeTrades([], 10000, 10000, 0);
+      const trades = [], TOL = 0.01;
       let pos = null, eq = 10000, pk = 10000, dd = 0;
-      for (let i = Math.min(N-1, closes.length-1); i < closes.length; i++) {
-        const sl = closes.slice(Math.max(0, i-N+1), i+1);
+      for (let i = N - 1; i < arr.length; i++) {
+        const sl = arr.slice(i - N + 1, i + 1);
         const { slope, intercept, stdDev } = calcLinReg(sl, sl.length);
         const rv = intercept + slope * (sl.length - 1);
-        const price = closes[i];
-        if (!pos && price <= (rv - 3*stdDev) * (1+TOL)) { pos = { entryDate: candles[i].time, entryPrice: price }; }
-        else if (pos && price >= (rv + 3*stdDev) * (1-TOL)) {
-          ({equity:eq,peak:pk,maxDD:dd} = closeTrade(pos, candles[i].time, price, eq, pk, dd, trades)); pos = null;
+        const price = arr[i];
+        if (!pos && price <= rv - sigmaEntry * stdDev * (1 + TOL)) { pos = { entryDate: cands[i].time, entryPrice: price }; }
+        else if (pos && price >= rv + sigmaExit * stdDev * (1 - TOL)) {
+          ({equity:eq,peak:pk,maxDD:dd} = closeTrade(pos, cands[i].time, price, eq, pk, dd, trades)); pos = null;
         }
       }
-      if (pos) closeTrade(pos, candles[closes.length-1].time, closes[closes.length-1], eq, pk, dd, trades, true);
+      // Trade ouvert : clôture au dernier prix connu
+      if (pos) closeTrade(pos, cands[arr.length-1].time, arr[arr.length-1], eq, pk, dd, trades, true);
       return finalizeTrades(trades, eq, pk, dd);
     }
 
-    // ── Stratégie MA Croisement ──
+    // ── Stratégie MA Croisement (données journalières — périodes réelles 20j/50j) ──
+    const closesDaily = candlesDaily.map(c => c.close);
     function sma(arr, i, n) {
       if (i < n-1) return null;
       let s = 0; for (let k = i-n+1; k <= i; k++) s += arr[k]; return s/n;
     }
     function runMACross(fast, slow) {
+      const arr = closesDaily, cands = candlesDaily;
+      if (arr.length < slow) return finalizeTrades([], 10000, 10000, 0);
       const trades = [];
       let pos = null, eq = 10000, pk = 10000, dd = 0;
       let prevFast = null, prevSlow = null;
-      for (let i = slow-1; i < closes.length; i++) {
-        const mf = sma(closes, i, fast), ms = sma(closes, i, slow);
-        const price = closes[i];
+      for (let i = slow-1; i < arr.length; i++) {
+        const mf = sma(arr, i, fast), ms = sma(arr, i, slow);
+        const price = arr[i];
         const crossUp   = prevFast !== null && prevFast <= prevSlow && mf > ms;
         const crossDown = prevFast !== null && prevFast >= prevSlow && mf < ms;
-        if (!pos && crossUp)  { pos = { entryDate: candles[i].time, entryPrice: price }; }
+        if (!pos && crossUp)  { pos = { entryDate: cands[i].time, entryPrice: price }; }
         else if (pos && crossDown) {
-          ({equity:eq,peak:pk,maxDD:dd} = closeTrade(pos, candles[i].time, price, eq, pk, dd, trades)); pos = null;
+          ({equity:eq,peak:pk,maxDD:dd} = closeTrade(pos, cands[i].time, price, eq, pk, dd, trades)); pos = null;
         }
         prevFast = mf; prevSlow = ms;
       }
-      if (pos) closeTrade(pos, candles[closes.length-1].time, closes[closes.length-1], eq, pk, dd, trades, true);
+      if (pos) closeTrade(pos, cands[arr.length-1].time, arr[arr.length-1], eq, pk, dd, trades, true);
       return finalizeTrades(trades, eq, pk, dd);
     }
 
@@ -919,23 +997,34 @@ async function backtestStock(gsym) {
     }
 
     // ── Calculer toutes les stratégies ──
+    // Périodes en semaines (≈ jours/5) : MA20j≈4sem, MA50j≈10sem, MA100j≈20sem, MA200j≈40sem
     const strategies = [
-      { label: 'LinReg 120M ±3σ', type:'lr', r: runLinReg(120) },
-      { label: 'LinReg 180M ±3σ', type:'lr', r: runLinReg(180) },
-      { label: 'LinReg 240M ±3σ', type:'lr', r: runLinReg(240) },
-      { label: 'LinReg 360M ±3σ', type:'lr', r: runLinReg(360) },
-      { label: 'MA 20 × 50',      type:'ma', r: runMACross(20,50) },
-      { label: 'MA 20 × 100',     type:'ma', r: runMACross(20,100) },
-      { label: 'MA 20 × 200',     type:'ma', r: runMACross(20,200) },
-      { label: 'MA 50 × 100',     type:'ma', r: runMACross(50,100) },
-      { label: 'MA 50 × 200',     type:'ma', r: runMACross(50,200) },
-      { label: 'MA 100 × 200',    type:'ma', r: runMACross(100,200) },
+      { label: 'LinReg 120M ±2σ', type:'lr', r: runLinReg(120, 2, 2) },
+      { label: 'LinReg 180M ±2σ', type:'lr', r: runLinReg(180, 2, 2) },
+      { label: 'LinReg 240M ±2σ', type:'lr', r: runLinReg(240, 2, 2) },
+      { label: 'LinReg 360M ±2σ', type:'lr', r: runLinReg(360, 2, 2) },
+      { label: 'MA 20 × 50',      type:'ma', r: runMACross(4,10) },
+      { label: 'MA 20 × 100',     type:'ma', r: runMACross(4,20) },
+      { label: 'MA 20 × 200',     type:'ma', r: runMACross(4,40) },
+      { label: 'MA 50 × 100',     type:'ma', r: runMACross(10,20) },
+      { label: 'MA 50 × 200',     type:'ma', r: runMACross(10,40) },
+      { label: 'MA 100 × 200',    type:'ma', r: runMACross(20,40) },
       { label: 'Buy & Hold',      type:'bh', r: runBuyHold() },
     ];
 
-    // Classer par ratio Calmar (rendement / max drawdown)
-    strategies.sort((a,b) => b.r.calmar - a.r.calmar);
-    const best = strategies[0];
+    // Classer par ratio Calmar — Buy & Hold toujours en bas, min 2 trades CLÔTURÉS requis
+    // (les positions encore ouvertes ne comptent pas : 0 drawdown réel → Calmar artificiel)
+    const closedCount = r => r.trades.filter(t => !t.open).length;
+    strategies.sort((a, b) => {
+      if (a.type === 'bh' && b.type !== 'bh') return 1;
+      if (b.type === 'bh' && a.type !== 'bh') return -1;
+      const aOk = closedCount(a.r) >= 2;
+      const bOk = closedCount(b.r) >= 2;
+      if (aOk && !bOk) return -1;
+      if (!aOk && bOk) return 1;
+      return b.r.calmar - a.r.calmar;
+    });
+    const best = strategies.find(s => s.type !== 'bh' && closedCount(s.r) >= 2) || strategies[0];
 
     const fmt  = v => (v>=0?'+':'')+v.toFixed(1)+'%';
     const fmtE = v => (v/1000).toFixed(1)+'k '+currency;
@@ -944,7 +1033,7 @@ async function backtestStock(gsym) {
     const typeLabel = t => t==='lr'?'LinReg': t==='ma'?'MM':'B&H';
 
     const rankTable = strategies.map((s,rank) => {
-      const r = s.r, isBest = rank===0;
+      const r = s.r, isBest = s === best;
       const col = r.totalReturn>=0?'#3fb950':'#f85149';
       return `<tr style="${isBest?'background:rgba(255,215,0,.08);':''}border-top:1px solid var(--border)">
         <td style="padding:6px;text-align:center;color:#888">${rank+1}</td>
@@ -967,7 +1056,7 @@ async function backtestStock(gsym) {
           <div style="font-weight:700;font-size:.95rem">📊 Backtest — ${symName}</div>
           <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:1.2rem;line-height:1">✕</button>
         </div>
-        <div style="font-size:.7rem;color:#aaa;margin-bottom:14px">Capital : 10 000 ${currency} · Données mensuelles · Classement par ratio Calmar (rendement ÷ max drawdown)</div>
+        <div style="font-size:.7rem;color:#aaa;margin-bottom:14px">Capital : 10 000 ${currency} · MA hebdomadaire / LinReg mensuel · Classement par ratio Calmar (rendement ÷ max drawdown)</div>
 
         <!-- Classement toutes stratégies -->
         <div style="font-size:.78rem;font-weight:700;color:#ffd700;margin-bottom:6px">🏆 Classement des stratégies</div>
@@ -1115,7 +1204,13 @@ async function showIndices() {
     const quoteMap = {};
     quotes.forEach(q => { quoteMap[q.symbol] = q; });
 
-    const fmtPts = v => v != null ? v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    const fmtIdx = (v, s) => {
+      if (v == null) return '—';
+      if (s.unit === 'FX') return v.toLocaleString('fr-FR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      const num = v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const pfx = s.unit === 'USD' && s.suffix ? '$' : s.unit === 'USD' ? '$' : '';
+      return pfx + num + (s.suffix || '');
+    };
 
     cardsEl.innerHTML = INDICES_DEF.map(s => {
       const q = quoteMap[s.yahooSym] || {};
@@ -1125,18 +1220,19 @@ async function showIndices() {
       const low    = q.regularMarketDayLow;
       const chgCls  = chgPct > 0 ? 'up' : chgPct < 0 ? 'down' : '';
       const badgeCls = chgPct > 0 ? 'badge-up' : chgPct < 0 ? 'badge-down' : 'badge-flat';
+      const unitLabel = s.unit === 'FX' ? 'taux de change' : s.unit === 'EUR' ? 'pts' : s.suffix ? s.suffix.replace('/','') : 'pts';
       return `<div class="card" onclick="selectIndex('${s.gsym}','${s.name}')">
         <div class="card-top">
           <div>
             <div class="card-name">${s.name}</div>
-            <div class="card-ticker">${s.gsym}</div>
+            <div class="card-ticker">${s.unit === 'FX' ? 'Forex' : s.unit === 'USD' && s.suffix ? 'Matière première' : s.gsym}</div>
           </div>
           <span class="badge ${badgeCls}">${chgPct != null ? fmtChg(chgPct) : '—'}</span>
         </div>
-        <div class="card-price ${chgCls}">${fmtPts(price)}</div>
+        <div class="card-price ${chgCls}">${fmtIdx(price, s)}</div>
         <div class="card-meta">
-          <div class="card-meta-item"><span class="card-meta-label">Haut</span><span class="card-meta-val">${fmtPts(high)}</span></div>
-          <div class="card-meta-item"><span class="card-meta-label">Bas</span><span class="card-meta-val">${fmtPts(low)}</span></div>
+          <div class="card-meta-item"><span class="card-meta-label">Haut</span><span class="card-meta-val">${fmtIdx(high, s)}</span></div>
+          <div class="card-meta-item"><span class="card-meta-label">Bas</span><span class="card-meta-val">${fmtIdx(low, s)}</span></div>
         </div>
       </div>`;
     }).join('');
@@ -1146,11 +1242,16 @@ async function showIndices() {
 }
 
 function selectIndex(gsym, name) {
+  hideFundamentals();
+  currentGsym = gsym; // permet le backtest sur les indices
   document.getElementById('chart-title').textContent = name;
   document.getElementById('chart-sub').textContent = gsym;
-  const eur = ['PX1'];  // seul le CAC40 est en EUR
   const isCrypto = CRYPTO_DEF.some(c => c.gsym === gsym);
-  loadChart(gsym, null, eur.includes(gsym) ? 'EUR' : 'USD', isCrypto ? 10 : 2.5);
+  const def = INDICES_DEF.find(d => d.gsym === gsym);
+  const currency = def?.unit === 'EUR' ? 'EUR' : def?.unit === 'FX' ? 'FX' : 'USD';
+  // Utilise le gsym nettoyé pour éviter les problèmes avec = dans les URLs
+  const safeGsym = gsym.replace(/=/g, '');
+  loadChart(safeGsym, null, currency, isCrypto ? 10 : 2.5);
 }
 
 // ══════════════════════════════════════════════
@@ -1212,8 +1313,12 @@ function switchTab(tab) {
   SHEET_TAB = tab;
   alerteMode = false;
   portfolioMode = false;
+  if (window._portfolioChart) { try{window._portfolioChart.remove();}catch(_){} window._portfolioChart=null; }
+  document.getElementById('div-saisir-panel').style.display = 'none';
   document.getElementById('tab-alerte').style.cssText = 'border-color:#f85149;color:#f85149';
   document.getElementById('tab-crypto').style.cssText = 'border-color:#f7931a;color:#f7931a';
+  document.getElementById('tab-portfolio').style.cssText = 'border-color:#26c6da;color:#26c6da';
+  document.getElementById('tab-dividendes').style.cssText = 'border-color:#ffd700;color:#ffd700';
   document.getElementById('refresh-alerte-btn')?.remove();
   const labels = { BOURSE: 'Mes valeurs', CAC40: 'CAC 40', SP500: 'S&P 500', NASDAQ: 'Nasdaq' };
   ['bourse','indices','cac40','sp500','nasdaq'].forEach(id => {
@@ -1224,6 +1329,7 @@ function switchTab(tab) {
   document.getElementById('chart-title').textContent = 'Sélectionnez une valeur';
   document.getElementById('chart-sub').textContent = 'Cliquez sur une carte pour afficher le graphique';
   document.getElementById('chart-container').innerHTML = '<div class="chart-empty"><span style="font-size:2rem">📈</span>Cliquez sur une valeur</div>';
+  document.getElementById('cards').innerHTML = '<div class="loading-screen">Chargement…</div>';
   loadSheet();
 }
 
@@ -1466,23 +1572,78 @@ function calcSMA(data, period) {
 // ══════════════════════════════════════════════
 // GOLDEN / DEATH CROSS MM100 × MM200
 // ══════════════════════════════════════════════
-function detectMACross(data) {
-  const mm100 = calcSMA(data, MA_CONFIG.mm100.period); // 5 mois
-  const mm200 = calcSMA(data, MA_CONFIG.mm200.period); // 10 mois
+function detectMACross(monthlyData) {
+  const MA_ORDER = ['mm20','mm50','mm100','mm200'];
+  const active = MA_ORDER.filter(k => document.getElementById('cb-' + k)?.checked);
+  if (active.length < 2) return [];
 
-  // Aligner les deux séries sur les mêmes dates
-  const map100 = Object.fromEntries(mm100.map(p => [p.time, p.value]));
-  const map200 = Object.fromEntries(mm200.map(p => [p.time, p.value]));
-  const times  = mm200.map(p => p.time); // mm200 démarre plus tard
+  const fastKey = active[0];
+  const slowKey = active[active.length - 1];
+
+  // Périodes journalières réelles (comme TradingView)
+  const DAILY_PERIODS  = { mm20: 20,  mm50: 50,  mm100: 100, mm200: 200 };
+  // Périodes hebdomadaires équivalentes (identiques au backtest)
+  const WEEKLY_PERIODS = { mm20: 4,   mm50: 10,  mm100: 20,  mm200: 40  };
+
+  let srcData, fp, sp, useDaily;
+  if (currentInterval === '1wk') {
+    // Mode hebdomadaire : mêmes données + mêmes périodes que le backtest → signaux cohérents
+    srcData  = monthlyData; // monthlyData = allCandles (hebdo) ici
+    fp       = WEEKLY_PERIODS[fastKey];
+    sp       = WEEKLY_PERIODS[slowKey];
+    useDaily = false;
+  } else {
+    // Mode mensuel : données journalières si disponibles, sinon mensuel
+    const daily  = allCandlesDaily || [];
+    const fastP  = DAILY_PERIODS[fastKey];
+    const slowP  = DAILY_PERIODS[slowKey];
+    useDaily = daily.length >= slowP + 10;
+    srcData  = useDaily ? daily : monthlyData;
+    fp       = useDaily ? fastP : MA_CONFIG[fastKey].period;
+    sp       = useDaily ? slowP : MA_CONFIG[slowKey].period;
+  }
+
+  const fastSeries = calcSMA(srcData, fp);
+  const slowSeries = calcSMA(srcData, sp);
+
+  // Map mois (yyyy-mm) → time de la bougie pour placer les flèches sur le graphique
+  // Utile uniquement quand les signaux viennent de données journalières (mode mensuel)
+  let monthToTime = null;
+  if (useDaily) {
+    monthToTime = {};
+    monthlyData.forEach(c => {
+      const ym = c.time.substring(0, 7);
+      if (!monthToTime[ym]) monthToTime[ym] = c.time;
+    });
+  }
+
+  const mapFast = Object.fromEntries(fastSeries.map(p => [p.time, p.value]));
+  const mapSlow = Object.fromEntries(slowSeries.map(p => [p.time, p.value]));
+  const times   = slowSeries.map(p => p.time);
 
   const crosses = [];
+  const seenMonths = new Set(); // une seule flèche par mois sur le graphique mensuel
+
   for (let i = 1; i < times.length; i++) {
-    const t  = times[i],   tp = times[i - 1];
-    const v1 = map100[t],  v2 = map200[t];
-    const p1 = map100[tp], p2 = map200[tp];
-    if (!v1 || !v2 || !p1 || !p2) continue;
-    if (p1 <= p2 && v1 > v2) crosses.push({ time: t, type: 'buy' });   // Golden Cross
-    if (p1 >= p2 && v1 < v2) crosses.push({ time: t, type: 'sell' });  // Death Cross
+    const t = times[i], tp = times[i - 1];
+    const vf = mapFast[t], vs = mapSlow[t];
+    const pf = mapFast[tp], ps = mapSlow[tp];
+    if (!vf || !vs || !pf || !ps) continue;
+
+    const isBuy  = pf <= ps && vf > vs;
+    const isSell = pf >= ps && vf < vs;
+    if (!isBuy && !isSell) continue;
+
+    // Convertir date journalière → date mensuelle pour l'affichage
+    let displayTime = t;
+    if (monthToTime) {
+      const ym = t.substring(0, 7);
+      displayTime = monthToTime[ym] || t;
+      if (seenMonths.has(displayTime)) continue; // déjà une flèche ce mois-là
+      seenMonths.add(displayTime);
+    }
+
+    crosses.push({ time: displayTime, type: isBuy ? 'buy' : 'sell' });
   }
   return crosses;
 }
@@ -1527,7 +1688,10 @@ function applyCrossSignals(candleSeries, data) {
 }
 
 function drawMA(key, chart, data) {
-  const { period, color, label } = MA_CONFIG[key];
+  const { color, label } = MA_CONFIG[key];
+  // Périodes adaptées à l'intervalle : mensuel → (1,3,5,10), hebdo → (4,10,20,40)
+  const WEEKLY_MA = { mm20: 4, mm50: 10, mm100: 20, mm200: 40 };
+  const period = currentInterval === '1wk' ? WEEKLY_MA[key] : MA_CONFIG[key].period;
   const smaData = calcSMA(data, period);
   if (!smaData.length) return;
   maSeries[key] = chart.addLineSeries({
@@ -1547,21 +1711,88 @@ function toggleReg() {
 function toggleMA(key) {
   if (!currentChart || !allCandles.length) return;
   const checked = document.getElementById('cb-' + key).checked;
+  const days = { '3mo': 90, '6mo': 180, '1y': 365, '3y': 1095 }[currentPeriod];
+  const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0] : '0000-00-00';
+  const data = allCandles.filter(c => c.time >= cutoff);
   if (checked) {
-    const days = { '3mo': 90, '6mo': 180, '1y': 365, '3y': 1095 }[currentPeriod];
-    const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0] : '0000-00-00';
-    const data = allCandles.filter(c => c.time >= cutoff);
     drawMA(key, currentChart, data);
   } else {
     if (maSeries[key]) { currentChart.removeSeries(maSeries[key]); maSeries[key] = null; }
+  }
+  // Recalcule les signaux Achat/Vente selon les MM actives
+  if (document.getElementById('cb-cross')?.checked && currentCandleSeries) {
+    applyCrossSignals(currentCandleSeries, data);
   }
 }
 
 function toggleCross() {
   if (!currentCandleSeries) return;
   const checked = document.getElementById('cb-cross').checked;
-  currentCandleSeries.setMarkers(checked ? currentMarkers : []);
   document.getElementById('cross-signal').style.display = checked ? '' : 'none';
+  updateAllMarkers();
+}
+
+let currentLinReg2Markers = [];
+
+function detectLinReg2Signals(data) {
+  // Même logique que le backtest : achat au −2σ, vente au +2σ, alternés
+  // → nombre de flèches = 2 × nombre de trades backtest
+  const p = window._regParams;
+  if (!p) return [];
+  const signals = [];
+  let inPos = false; // false = pas de position, true = position ouverte
+  for (const c of data) {
+    const regIdx = p.timeToRegIdx[c.time];
+    if (regIdx === undefined) continue;
+    const rv    = p.intercept + p.slope * regIdx;
+    const low2  = rv - 2 * p.stdDev;
+    const high2 = rv + 2 * p.stdDev;
+    if (!inPos && c.close <= low2) {
+      signals.push({ time: c.time, type: 'buy' });
+      inPos = true;
+    } else if (inPos && c.close >= high2) {
+      signals.push({ time: c.time, type: 'sell' });
+      inPos = false;
+    }
+  }
+  return signals;
+}
+
+function applyLinReg2Signals(candleSeries, data) {
+  const signals = detectLinReg2Signals(data);
+  currentLinReg2Markers = signals.map(s => ({
+    time:     s.time,
+    position: s.type === 'buy' ? 'belowBar' : 'aboveBar',
+    color:    s.type === 'buy' ? '#26c6da'  : '#f06292',
+    shape:    s.type === 'buy' ? 'arrowUp'  : 'arrowDown',
+    text:     s.type === 'buy' ? '−2σ Achat' : '+2σ Vente',
+  }));
+  updateAllMarkers();
+}
+
+function toggleLinReg2() {
+  if (!currentCandleSeries || !allCandles.length) return;
+  const checked = document.getElementById('cb-linreg2').checked;
+  if (checked) {
+    const days = { '3mo': 90, '6mo': 180, '1y': 365, '3y': 1095 }[currentPeriod];
+    const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0] : '0000-00-00';
+    const data = allCandles.filter(c => c.time >= cutoff && c.high / c.low < currentMaxRatio);
+    applyLinReg2Signals(currentCandleSeries, data);
+  } else {
+    currentLinReg2Markers = [];
+    updateAllMarkers();
+  }
+}
+
+function updateAllMarkers() {
+  if (!currentCandleSeries) return;
+  const showCross    = document.getElementById('cb-cross')?.checked;
+  const showLinReg2  = document.getElementById('cb-linreg2')?.checked;
+  const maMarkers    = showCross   ? currentMarkers       : [];
+  const lrMarkers    = showLinReg2 ? currentLinReg2Markers : [];
+  // Fusionner et trier par date
+  const merged = [...maMarkers, ...lrMarkers].sort((a, b) => a.time.localeCompare(b.time));
+  currentCandleSeries.setMarkers(merged);
 }
 
 function toggleVolume() {
@@ -1853,28 +2084,7 @@ async function checkAutoAlerts() {
 
 // ── Actualités ──
 let _newsTicker = null;
-async function loadNews(ticker) {
-  const panel = document.getElementById('news-panel');
-  const list = document.getElementById('news-list');
-  if (!ticker || ticker === _newsTicker) return;
-  _newsTicker = ticker;
-  panel.style.display = 'block';
-  list.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Chargement…</div>';
-  try {
-    const r = await fetch(`${SERVER}/api/news?ticker=${ticker}`);
-    const news = await r.json();
-    if (!news.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Aucune actualité</div>'; return; }
-    list.innerHTML = news.map(n => {
-      const d = n.time ? new Date(n.time*1000).toLocaleDateString('fr-FR') : '';
-      return `<div class="news-item">
-        <div style="flex:1">
-          <a href="${n.url}" target="_blank" style="color:var(--text);text-decoration:none;font-size:.82rem;font-weight:600;line-height:1.3">${n.title}</a>
-          <div style="font-size:.72rem;color:var(--muted);margin-top:3px">${n.publisher||''} ${d?'· '+d:''}</div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) { list.innerHTML = ''; panel.style.display = 'none'; }
-}
+async function loadNews(ticker) { /* actualités désactivées */ }
 
 // ── Fiche fondamentale ──
 const _fundCache = {};
@@ -2088,6 +2298,25 @@ async function drawPortfolioChart(period) {
       }
     }
 
+    // Ajouter le point live d'aujourd'hui
+    const livePortfolio = JSON.parse(localStorage.getItem('bourse_portfolio') || '[]');
+    const liveValue = Math.round(livePortfolio.reduce((sum, pos) => {
+      const st = (stocks || []).find(s => s.gsym === pos.gsym);
+      const price = st?.live || st?.price || pos.pru || 0;
+      return sum + pos.qty * price;
+    }, 0));
+    const today = new Date().toISOString().split('T')[0];
+    if (liveValue > 0) {
+      const last = combined[combined.length-1];
+      if (!last || last.time < today) combined.push({ time: today, value: liveValue });
+      else if (last.time === today) combined[combined.length-1] = { time: today, value: liveValue };
+      if (!last || last.time < today) {
+        const hist = JSON.parse(localStorage.getItem('bourse_perf_history') || '[]');
+        hist.push({ time: today, value: liveValue });
+        localStorage.setItem('bourse_perf_history', JSON.stringify(hist));
+      }
+    }
+
     // Partie réelle (données exactes) — vert vif
     const realOnly = realStart ? combined.filter(d => d.time >= realStart) : combined;
     const mainRaw = realOnly.length ? realOnly : combined;
@@ -2234,6 +2463,22 @@ async function showPortfolio() {
     } catch(_) {}
   }));
 
+  // ── Taux EUR/USD live ──
+  let eurusd = parseFloat(localStorage.getItem('bourse_eurusd') || '1.08');
+  try {
+    const fxResp = await fetch(`${SERVER}/api/quotes?tickers=EURUSD%3DX`);
+    const fxData = await fxResp.json();
+    const rate = fxData[0]?.regularMarketPrice;
+    if (rate > 0) { eurusd = rate; localStorage.setItem('bourse_eurusd', rate); }
+  } catch(_) {}
+
+  // Devise par position : EPA/AMS/BIT/ETR → EUR, sinon USD
+  function posCurrency(gsym) {
+    if (/^(EPA|AMS|BIT|ETR|SWX|BME):/.test(gsym)) return 'EUR';
+    return 'USD';
+  }
+  const toEur = (val, cur) => cur === 'USD' ? val / eurusd : val;
+
   // ── Fréquence de paiement par action ──
   const PAY_FREQ = { 'EPA:TTE': 4, 'EPA:RI': 2 };
 
@@ -2245,9 +2490,10 @@ async function showPortfolio() {
     const jan1Price = jan1Map[pos.gsym];
     const divInfo   = divMap[pos.gsym];
     const freq      = PAY_FREQ[pos.gsym] || 4;
-    const sym       = pos.gsym.startsWith('EPA:') ? ' €' : ' $';
+    const currency  = posCurrency(pos.gsym);
+    const sym       = currency === 'EUR' ? ' €' : ' $';
 
-    const invested  = pos.qty * pos.buyPrice;
+    const invested  = pos.qty * pos.buyPrice;               // devise native
     const curVal    = curPrice  ? pos.qty * curPrice  : null;
     const valJan1   = jan1Price ? pos.qty * jan1Price : null;
     const pl        = curVal  != null ? curVal  - invested : null;
@@ -2270,13 +2516,14 @@ async function showPortfolio() {
     const daysPay   = divInfo?.nextPaiement    ? Math.round((new Date(divInfo.nextPaiement)    - todayObj) / 86400000) : null;
 
     if (curVal != null) {
-      totalInvested    += invested;
-      totalVal         += curVal;
+      // Totaux toujours en EUR
+      totalInvested    += toEur(invested, currency);
+      totalVal         += toEur(curVal,   currency);
       totalDivReceived += divInfo?.totalReceived || 0;
-      if (valJan1)  totalValJan1 += valJan1;
-      if (dayPl)    totalDayPl   += dayPl;
+      if (valJan1)  totalValJan1 += toEur(valJan1, currency);
+      if (dayPl)    totalDayPl   += toEur(dayPl,   currency);
     }
-    return { pos, curPrice, prevClose, jan1Price, invested, curVal, pl, plPct, dayPl, dayPct, ytdPl, ytdPct, freq, lastAnn, periDiv, fwdYield, yoc, rachat, daysDet, daysPay, divInfo, sym };
+    return { pos, curPrice, prevClose, jan1Price, invested, curVal, pl, plPct, dayPl, dayPct, ytdPl, ytdPct, freq, lastAnn, periDiv, fwdYield, yoc, rachat, daysDet, daysPay, divInfo, sym, currency, eurusd };
   });
 
   // ── Poids par position ──
@@ -2316,12 +2563,17 @@ async function showPortfolio() {
     ${tile('📆 Perf du jour',      fmtK(totalDayPl),     pct(totalDayPct),               cu(totalDayPl))}
     ${tile('💰 Div reçus total',   '+'+fmtK(totalDivReceived), '',                       'color:#ffd700')}
     ${tile('⭐ Perf Totale PEA',   pct(totalPlWithDivPct), '+'+fmtK(totalPlWithDiv),     'color:#ffd700')}
+    ${tile('💱 EUR/USD',           eurusd.toFixed(4),      'taux de change live',           'color:#aaa')}
   </div>`;
 
   // ── 2. Lignes détail par action ──
   const stockRows = positions.map((p, pIdx) => {
-    const { pos, curPrice, invested, curVal, jan1Price, pl, plPct, dayPl, dayPct, ytdPl, ytdPct, freq, lastAnn, periDiv, fwdYield, yoc, rachat, daysDet, daysPay, divInfo, sym } = p;
+    const { pos, curPrice, invested, curVal, jan1Price, pl, plPct, dayPl, dayPct, ytdPl, ytdPct, freq, lastAnn, periDiv, fwdYield, yoc, rachat, daysDet, daysPay, divInfo, sym, currency } = p;
     const freqLbl = freq === 4 ? 'Trim.' : 'Sem.';
+    const fmtNat = v => v != null ? (currency === 'USD' ? '$' : '') + fmt(v) + (currency === 'EUR' ? ' €' : '') : '—';
+    const fmtNat0 = v => v != null ? (currency === 'USD' ? '$' : '') + fmt0(Math.abs(v)) + (currency === 'EUR' ? ' €' : '') : '—';
+    const curValEur = curVal != null ? toEur(curVal, currency) : null;
+    const investedEur = toEur(invested, currency);
     const tickerShort = pos.gsym.split(':')[1];
     const urgentDet = daysDet != null && daysDet >= 0 && daysDet <= 15;
     const urgentPay = daysPay != null && daysPay >= 0 && daysPay <= 15;
@@ -2350,13 +2602,13 @@ async function showPortfolio() {
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
         ${miniTile('Nbre de titres',          pos.qty.toLocaleString('fr-FR'))}
-        ${miniTile('PRU',                     fmt(pos.buyPrice)+sym)}
-        ${miniTile('Investi',                 fmtK(invested))}
-        ${miniTile('P&L cours',               pl!=null?(pl>=0?'+':'')+fmt0(pl)+sym:'—',  cu(pl))}
+        ${miniTile('PRU',                     fmtNat(pos.buyPrice))}
+        ${miniTile('Investi',                 currency==='USD'?'$'+fmt0(invested)+' ≈ '+fmtK(investedEur):fmtK(invested))}
+        ${miniTile('P&L cours',               pl!=null?(pl>=0?'+':'')+fmtNat0(pl)+(currency==='USD'?' ≈ '+fmtK(toEur(pl,currency)):''):'—', cu(pl))}
         ${miniTile('Perf totale',             pct(plPct),                                 cu(plPct))}
         ${miniTile('Perf du jour',            dayPct!=null?pct(dayPct):'—',               cu(dayPct))}
         ${miniTile('Perf 1er Jan',            ytdPct!=null?pct(ytdPct):'—',              cu(ytdPct))}
-        ${miniTile('Réf. 1er Jan',            jan1Price!=null?fmt(jan1Price)+sym:'—',    'color:var(--muted)')}
+        ${miniTile('Réf. 1er Jan',            jan1Price!=null?fmtNat(jan1Price):'—',    'color:var(--muted)')}
         ${miniTile('Div '+freqLbl,            periDiv>0?'+'+fmt0(periDiv)+sym:'—',        'color:#ffd700')}
         ${miniTile('Div annuel proj.',        lastAnn>0?'+'+fmt0(lastAnn)+sym:'—',        'color:#ffd700')}
         ${miniTile('Rend. Div (cours)',       fwdYield!=null?fwdYield.toFixed(2)+' %':'—','color:#ffd700')}
@@ -2365,7 +2617,7 @@ async function showPortfolio() {
         ${miniTile('Div reçus total',         divInfo?.totalReceived?'+'+fmt0(divInfo.totalReceived)+sym:'—','color:#ffd700')}
         ${miniTile('Détat. dans',             daysDet!=null&&daysDet>=0?daysDet+' jours':(daysDet!=null?'Passé':'—'), urgentDet?'color:#f5a623':'')}
         ${miniTile('Paiement dans',           daysPay!=null&&daysPay>=0?daysPay+' jours':(daysPay!=null?'Passé':'—'), urgentPay?'color:#3fb950':'')}
-        ${miniTile('Poids PEA',               p.weight!=null?p.weight.toFixed(1)+' %':'—', 'color:#26c6da')}
+        ${miniTile('Poids portef.',           p.weight!=null?p.weight.toFixed(1)+' %':'—', 'color:#26c6da')}
       </div>
     </div>`;
   }).join('');
@@ -2382,18 +2634,18 @@ async function showPortfolio() {
   };
   const PIE_COLORS = ['#3fb950','#58a6ff','#ffd700','#f85149','#bf8ee8','#ff7b72','#26c6da','#e6b17e','#7ee787'];
 
-  // Secteurs
+  // Secteurs (en EUR)
   const sectorMap={};
-  positions.forEach(p=>{ if(!p.curVal) return; const s=SECTORS[p.pos.gsym]||'Autre'; sectorMap[s]=(sectorMap[s]||0)+p.curVal; });
+  positions.forEach(p=>{ if(!p.curVal) return; const s=SECTORS[p.pos.gsym]||'Autre'; sectorMap[s]=(sectorMap[s]||0)+toEur(p.curVal,p.currency); });
   const sectorData=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({label:l,value:v,color:PIE_COLORS[i%PIE_COLORS.length]}));
 
-  // Géographie
+  // Géographie (en EUR)
   const geoMap={};
-  positions.forEach(p=>{ if(!p.curVal) return; const g=GEO[p.pos.gsym]||'Autre'; geoMap[g]=(geoMap[g]||0)+p.curVal; });
+  positions.forEach(p=>{ if(!p.curVal) return; const g=GEO[p.pos.gsym]||'Autre'; geoMap[g]=(geoMap[g]||0)+toEur(p.curVal,p.currency); });
   const geoData=Object.entries(geoMap).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({label:l,value:v,color:PIE_COLORS[i%PIE_COLORS.length]}));
 
-  // Poids PEA par action
-  const weightData=positions.filter(p=>p.curVal).sort((a,b)=>(b.curVal||0)-(a.curVal||0)).map((p,i)=>({label:p.pos.gsym.split(':')[1],value:p.curVal||0,color:PIE_COLORS[i%PIE_COLORS.length]}));
+  // Poids portefeuille par action (en EUR)
+  const weightData=positions.filter(p=>p.curVal).sort((a,b)=>toEur(b.curVal||0,b.currency)-toEur(a.curVal||0,a.currency)).map((p,i)=>({label:p.pos.gsym.split(':')[1]||p.pos.gsym,value:toEur(p.curVal||0,p.currency),color:PIE_COLORS[i%PIE_COLORS.length]}));
 
   // Heatmap performance
   const heatCells = positions.map(p => {
@@ -2462,6 +2714,7 @@ async function showPortfolio() {
     <div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center">
       <div style="font-size:.75rem;color:var(--muted)">Investi : <b>${fmtK(totalInvested)}</b></div>
       <button class="btn btn-primary" onclick="openAddPosition()" style="font-size:.8rem">+ Ajouter une position</button>
+      <label style="cursor:pointer"><input type="file" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="importFortuneoFile(this)"><button class="btn btn-outline" style="font-size:.8rem;pointer-events:none">📥 Importer Fortuneo</button></label>
     </div>
     ${portfolio.length ? cardsHtml : '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px">Aucune position</div>'}
     ${formHtml}`;
@@ -2472,6 +2725,239 @@ async function showPortfolio() {
 function openAddPosition() {
   const f=document.getElementById('add-position-form');
   if(f) f.style.display='';
+}
+
+// ── Mapping noms Fortuneo → gsym ──
+const FORTUNEO_MAP = {
+  'TOTALENERGIES':'EPA:TTE','TOTAL ENERGIES':'EPA:TTE',
+  'PERNOD RICARD':'EPA:RI',
+  'LVMH':'EPA:MC','LVMH MOET HENNESSY':'EPA:MC',
+  'LEGRAND':'EPA:LR',
+  'SAFRAN':'EPA:SAF',
+  'THALES':'EPA:HO',
+  'AIRBUS':'EPA:AIR',
+  'SCHNEIDER ELECTRIC':'EPA:SU',
+  'APPLE':'AAPL',
+  'MICROSOFT':'MSFT',
+  'ALPHABET':'GOOGL','ALPHABET A':'GOOGL',
+  'AMAZON':'AMZN',
+  'NVIDIA':'NVDA',
+  'VISA':'V',
+  'MASTERCARD':'MA',
+  'ACCENTURE':'ACN',
+  'ADOBE':'ADBE',
+  'SALESFORCE':'CRM',
+  'APPLIED MATERIALS':'AMAT',
+  'INTEL':'INTC',
+  'NIKE':'NKE',
+  'PFIZER':'PFE',
+  'REALTY INCOME':'O',
+  'FERRARI':'RACE',
+  'ZOETIS':'ZTS',
+  'CANADIAN NATURAL':'CNQ',
+  'STANLEY BLACK':'SWK','STANLEY BLACK & DECKER':'SWK',
+  'UGI':'UGI',
+  'VF CORP':'VFC','VF CORPORATION':'VFC',
+  'LEGGET & PLATT':'LEG','LEGGETT & PLATT':'LEG',
+  'MEDICAL PROPERTIES':'MPT',
+  'HAWAIIAN ELECTRIC':'HE',
+  'CHEVRON':'CVX',
+  'TRAVELERS':'TRV',
+  'CME GROUP':'CME',
+};
+
+function importFortuneoFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const isXlsx = file.name.match(/\.xlsx?$/i);
+  const reader = new FileReader();
+  if (isXlsx) {
+    reader.onload = e => {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const text = XLSX.utils.sheet_to_csv(ws, {FS:'\t'});
+      parseFortuneoCSV(text);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = e => parseFortuneoCSV(e.target.result);
+    reader.readAsText(file, 'UTF-8');
+  }
+  input.value = '';
+}
+
+function parseFortuneoCSV(text) {
+  const lines = text.split('\n').map(l => l.split('\t').map(c => c.trim().replace(/^"|"$/g,'')));
+  const header = lines[0].map(h => h.toLowerCase());
+  const iLib = header.findIndex(h => h.includes('lib'));
+  const iOp  = header.findIndex(h => h.includes('op'));
+  const iDate= header.findIndex(h => h.includes('date'));
+  const iQty = header.findIndex(h => h.includes('qt'));
+  const iPrix= header.findIndex(h => h.includes('prix'));
+  const iMnt = header.findIndex(h => h.includes('montant brut') || h.includes('brut'));
+
+  const dividends = [];
+  const allRows = [], lastDateRows = [];
+  let lastDate = ''; // date la plus récente du fichier (format JJ/MM/AAAA)
+
+  // 1re passe : trouver la date la plus récente
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i];
+    if (row.length < 5) continue;
+    const op   = (row[iOp]||'').toLowerCase();
+    const date = (row[iDate]||'').trim();
+    if (!date || !(op.includes('achat') || op.includes('vente'))) continue;
+    // Convertir JJ/MM/AAAA → AAAA/MM/JJ pour comparer
+    const parts = date.split('/');
+    if (parts.length !== 3) continue;
+    const iso = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (!lastDate || iso > lastDate) lastDate = iso;
+  }
+  // Reconvertir en JJ/MM/AAAA pour comparer aux lignes
+  const lastDateStr = lastDate
+    ? `${lastDate.split('/')[2]}/${lastDate.split('/')[1]}/${lastDate.split('/')[0]}`
+    : '';
+
+  // 2e passe : construire les listes
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i];
+    if (row.length < 5) continue;
+    const lib  = (row[iLib]||'').toUpperCase().trim();
+    const op   = (row[iOp]||'').toLowerCase();
+    const qty  = parseFloat((row[iQty]||'0').replace(',','.')) || 0;
+    const prix = parseFloat((row[iPrix]||'0').replace(',','.')) || 0;
+    const mnt  = Math.abs(parseFloat((row[iMnt]||'0').replace(',','.'))) || 0;
+    const date = (row[iDate]||'').trim();
+    if (!lib) continue;
+
+    if (op.includes('achat') || op.includes('vente')) {
+      const sign = op.includes('achat') ? 1 : -1;
+      allRows.push({ lib, qty: qty * sign, prix });
+      if (date === lastDateStr) lastDateRows.push({ lib, qty: qty * sign, prix });
+    } else if (op.includes('coupon') || op.includes('dividende')) {
+      dividends.push({ lib, date, montant: mnt });
+    }
+  }
+
+  function buildPositions(rows) {
+    const pos = {};
+    rows.forEach(r => {
+      if (!pos[r.lib]) pos[r.lib] = { totalQty:0, totalCost:0 };
+      if (r.qty > 0) { pos[r.lib].totalQty += r.qty; pos[r.lib].totalCost += r.qty * r.prix; }
+      else pos[r.lib].totalQty += r.qty;
+    });
+    return pos;
+  }
+
+  window._fortuneoAll        = buildPositions(allRows);
+  window._fortuneoToday      = buildPositions(lastDateRows);
+  window._fortuneoLastDate   = lastDateStr;
+  window._fortuneoDividends  = dividends;
+
+  const defaultMode = lastDateRows.length > 0 ? 'today' : 'all';
+  showFortuneoPreview(defaultMode);
+}
+
+function buildPreviewRows(mode) {
+  const positions = mode === 'all' ? window._fortuneoAll : window._fortuneoToday;
+  return Object.entries(positions)
+    .filter(([,p]) => p.totalQty > 0.001)
+    .map(([lib, p]) => {
+      const gsym = FORTUNEO_MAP[lib] || FORTUNEO_MAP[lib.split(' ').slice(0,2).join(' ')] || '';
+      const pru = p.totalCost / p.totalQty;
+      return { lib, gsym, qty: Math.round(p.totalQty), pru: Math.round(pru*100)/100 };
+    });
+}
+
+function renderFortuneoTable(mode) {
+  const rows = buildPreviewRows(mode);
+  const tbody = document.getElementById('fortuneo-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map((r,i) => `
+    <tr style="border-bottom:1px solid #333">
+      <td style="padding:8px 12px;font-weight:600;color:#ffd700">${r.lib}</td>
+      <td style="padding:8px 12px"><input id="fi-gsym-${i}" value="${r.gsym}" placeholder="EPA:TTE" style="background:#0d0f1a;border:1px solid #333;border-radius:4px;color:#e6edf3;padding:4px 8px;width:120px;font-size:.8rem"></td>
+      <td style="padding:8px 12px;color:#3fb950">${r.qty}</td>
+      <td style="padding:8px 12px;color:#ffd700">${r.pru.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td>
+      <td style="padding:8px 12px"><input type="checkbox" id="fi-chk-${i}" checked style="accent-color:#ffd700"></td>
+    </tr>`).join('');
+  // Stocker le mode actif pour l'import
+  document.getElementById('fortuneo-import-btn').onclick = () => confirmFortuneoImport(rows);
+  // Mettre en surbrillance le bouton actif
+  document.getElementById('fortuneo-btn-today').style.cssText = mode === 'today'
+    ? 'padding:6px 14px;background:#ffd700;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.82rem'
+    : 'padding:6px 14px;background:#333;color:#aaa;border:none;border-radius:6px;cursor:pointer;font-size:.82rem';
+  document.getElementById('fortuneo-btn-all').style.cssText = mode === 'all'
+    ? 'padding:6px 14px;background:#ffd700;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.82rem'
+    : 'padding:6px 14px;background:#333;color:#aaa;border:none;border-radius:6px;cursor:pointer;font-size:.82rem';
+  // Infos
+  const info = document.getElementById('fortuneo-info');
+  const lastDate = window._fortuneoLastDate || '';
+  if (info) info.textContent = rows.length === 0
+    ? (mode === 'today' ? '⚠️ Aucune transaction trouvée pour cette date.' : '⚠️ Aucune position trouvée.')
+    : `${rows.length} position(s) — ${mode === 'today' ? `dernière date : ${lastDate}` : 'tout l\'historique'}`;
+}
+
+function showFortuneoPreview(mode) {
+  const dividends = window._fortuneoDividends || [];
+  const divHtml = dividends.length ? `<div style="margin-top:12px;color:#aaa;font-size:.82rem">💰 ${dividends.length} dividende(s) détecté(s) (import non automatique)</div>` : '';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:#1e2130;border-radius:12px;padding:24px;width:700px;max-width:95vw;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="color:#ffd700;margin:0">📥 Import Fortuneo</h3>
+        <div style="display:flex;gap:8px">
+          <button id="fortuneo-btn-today" onclick="renderFortuneoTable('today')">📅 Dernière date</button>
+          <button id="fortuneo-btn-all"   onclick="renderFortuneoTable('all')">📋 Tout l'historique</button>
+        </div>
+      </div>
+      <div id="fortuneo-info" style="font-size:.82rem;color:#aaa;margin-bottom:10px"></div>
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <thead><tr style="border-bottom:1px solid #444">
+          <th style="text-align:left;padding:8px 12px;color:#aaa">Libellé</th>
+          <th style="text-align:left;padding:8px 12px;color:#aaa">Ticker</th>
+          <th style="text-align:left;padding:8px 12px;color:#aaa">Qté</th>
+          <th style="text-align:left;padding:8px 12px;color:#aaa">PRU</th>
+          <th style="text-align:left;padding:8px 12px;color:#aaa">Importer</th>
+        </tr></thead>
+        <tbody id="fortuneo-tbody"></tbody>
+      </table>
+      ${divHtml}
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 20px;background:#444;color:#fff;border:none;border-radius:6px;cursor:pointer">Annuler</button>
+        <button id="fortuneo-import-btn" style="padding:8px 20px;background:#ffd700;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700">✓ Importer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  renderFortuneoTable(mode);
+}
+
+function confirmFortuneoImport(rows) {
+  const pf = JSON.parse(localStorage.getItem('bourse_portfolio')||'[]');
+  let imported = 0;
+  rows.forEach((r, i) => {
+    const chk = document.getElementById(`fi-chk-${i}`);
+    const gsymInput = document.getElementById(`fi-gsym-${i}`);
+    if (!chk?.checked) return;
+    const gsym = (gsymInput?.value || r.gsym).trim().toUpperCase();
+    if (!gsym) return;
+    const idx = pf.findIndex(p => p.gsym === gsym);
+    if (idx >= 0) {
+      // Recalcul PRU moyen pondéré avec la position existante
+      const ex = pf[idx];
+      const totalCost = ex.qty * ex.buyPrice + r.qty * r.pru;
+      const totalQty  = ex.qty + r.qty;
+      pf[idx] = { ...ex, qty: totalQty, buyPrice: Math.round(totalCost/totalQty*100)/100 };
+    } else {
+      pf.push({ gsym, name: r.lib, qty: r.qty, buyPrice: r.pru });
+    }
+    imported++;
+  });
+  localStorage.setItem('bourse_portfolio', JSON.stringify(pf));
+  document.querySelector('div[style*="position:fixed"][style*="9999"]')?.remove();
+  showToast(`✓ ${imported} position(s) mise(s) à jour depuis Fortuneo`, '#ffd700');
+  showPortfolio();
 }
 
 function confirmAddPosition() {
@@ -2846,6 +3332,7 @@ function showDividendes(view) {
   const allYears = [...new Set(divList.flatMap(d=>(d.history||[]).map(h=>h.year)))].sort();
 
   if (view === 'mensuel') makeSvgMensuel();
+  else if (view === 'tableau') { container.innerHTML = ''; setSubtitle(''); }
   else makeSvgAnnuel();
   const tableauContent = view === 'tableau' ? makeTableauMensuel() : '';
   const tableRows = allYears.map(y => {
